@@ -4,7 +4,9 @@
 replicaCount: 1
 
 image:
+  repository: ""  # Leave empty for local images
   tag: latest
+  pullPolicy: IfNotPresent  # Important for local images
 
 service:
   type: ClusterIP
