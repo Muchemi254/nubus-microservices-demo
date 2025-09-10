@@ -1,0 +1,7 @@
+# helm/nubus-demo/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+meta
+  name: nubus-demo-config
+
+  environment: {{ .Values.environment | quote }}

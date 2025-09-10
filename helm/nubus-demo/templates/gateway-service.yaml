@@ -1,0 +1,48 @@
+# helm/nubus-demo/templates/gateway-service.yaml
+apiVersion: apps/v1
+kind: Deployment
+meta
+  name: gateway-service
+  labels:
+    app: gateway-service
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: gateway-service
+  template:
+    meta
+      labels:
+        app: gateway-service
+    spec:
+      containers:
+        - name: gateway-service
+          image: "{{ .Values.image.repository }}/gateway-service:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 5000
+          env:
+            - name: FLASK_ENV
+              value: "{{ .Values.environment }}"
+            - name: USER_SERVICE_URL
+              value: "http://user-service:80"
+            - name: PRODUCT_SERVICE_URL
+              value: "http://product-service:80"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+meta
+  name: gateway-service
+  labels:
+    app: gateway-service
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 5000
+      protocol: TCP
+      name: http
+  selector:
+    app: gateway-service

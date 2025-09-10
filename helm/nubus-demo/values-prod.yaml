@@ -1,0 +1,35 @@
+# helm/nubus-demo/values-prod.yaml
+# Production values for nubus-demo chart
+
+replicaCount: 3
+
+image:
+  tag: latest
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  hosts:
+    - host: nubus-demo.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+environment: prod
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70

@@ -1,0 +1,71 @@
+# .gitlab-ci.yml
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  HELM_VERSION: "3.10.0"
+  KUBE_CONTEXT: "nubus-demo"
+
+before_script:
+  - docker info
+
+build:
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHA ./services/user-service
+    - docker build -t $CI_REGISTRY_IMAGE/product-service:$CI_COMMIT_SHA ./services/product-service
+    - docker build -t $CI_REGISTRY_IMAGE/gateway-service:$CI_COMMIT_SHA ./services/gateway-service
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker push $CI_REGISTRY_IMAGE/user-service:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/product-service:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/gateway-service:$CI_COMMIT_SHA
+
+test:
+  stage: test
+  image: python:3.9
+  script:
+    - pip install -r ./services/user-service/requirements.txt
+    - pip install -r ./services/product-service/requirements.txt
+    - pip install -r ./services/gateway-service/requirements.txt
+    - cd ./services/user-service && python -m pytest tests/
+    - cd ../product-service && python -m pytest tests/
+    - cd ../gateway-service && python -m pytest tests/
+
+deploy-dev:
+  stage: deploy
+  image: registry.gitlab.com/gitlab-org/cloud-deploy/kubernetes-helmfile:kubectl1.24.0-helm3.9.0
+  environment:
+    name: development
+  only:
+    - develop
+  script:
+    - kubectl config use-context $KUBE_CONTEXT
+    - helm upgrade --install nubus-demo ./helm/nubus-demo
+      --set image.tag=$CI_COMMIT_SHA
+      --set environment=dev
+      -f ./helm/nubus-demo/values-dev.yaml
+    - kubectl rollout status deployment/user-service
+    - kubectl rollout status deployment/product-service
+    - kubectl rollout status deployment/gateway-service
+
+deploy-prod:
+  stage: deploy
+  image: registry.gitlab.com/gitlab-org/cloud-deploy/kubernetes-helmfile:kubectl1.24.0-helm3.9.0
+  environment:
+    name: production
+  only:
+    - main
+  when: manual
+  script:
+    - kubectl config use-context $KUBE_CONTEXT
+    - helm upgrade --install nubus-demo ./helm/nubus-demo
+      --set image.tag=$CI_COMMIT_SHA
+      --set environment=prod
+      -f ./helm/nubus-demo/values-prod.yaml

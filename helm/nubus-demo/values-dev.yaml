@@ -1,0 +1,29 @@
+# helm/nubus-demo/values-dev.yaml
+# Development values for nubus-demo chart
+
+replicaCount: 1
+
+image:
+  tag: latest
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  hosts:
+    - host: nubus-demo-dev.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+environment: dev
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
